@@ -7,13 +7,14 @@ import time
 ti.init(arch=ti.cpu, random_seed = int(time.time()))
 
 objFile = Objfile()
-faces = objFile.getFaces()
-positions = objFile.normalized()
 objFile.readTxt("bunny.txt")
 NV = objFile.getNumVertice()
 NF = objFile.getNumFaces()  # number of faces
+positions = objFile.normalized()
+faces = objFile.getFaces()
+print(f"{NF} faces, {NV} vertices")
 AABB = objFile.get_normalized_AABB()
-bv = findBoundaryPoints(faces, positions.shape[0])
+bv = findBoundaryPoints(faces, NV)
 be = findBoudaryEdge(faces)
 
 
