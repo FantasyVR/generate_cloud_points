@@ -1,8 +1,7 @@
 import numpy as np
 from scipy.sparse import coo_matrix
 from read_obj import Objfile
-import taichi as ti
-ti.init(arch=ti.cpu)
+
 
 
 def minA(A,val):
@@ -109,6 +108,8 @@ def initObj(file):
 
 
 if __name__ == "__main__":
+    import taichi as ti
+    ti.init(arch=ti.cpu)
     pos, f2v = initCubeMesh(2)
     # pos, f2v = initObj("armadillo.txt")
     

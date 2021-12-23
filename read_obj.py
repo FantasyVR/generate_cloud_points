@@ -13,7 +13,7 @@ class Objfile:
     m_vertices = []
     m_indices = []
     m_filename = ""
-    m_AABB = [0,0,0,0] # x_min, y_min, x_max, y_max
+    m_AABB = [0.0,0.0,0.0,0.0] # x_min, y_min, x_max, y_max
     w, h = 0.0, 0.0
     def read(self, filename=""):
         """
@@ -98,17 +98,17 @@ class Objfile:
     def getNumFaces(self):
         return self.m_numFaces
 
-    def compute_AABB(self):
-        self.positions = np.asarray(self.m_vertices)
-        self.m_AABB[0] = np.floor(np.min(self.positions[:,0]))
-        self.m_AABB[1] = np.floor(np.min(self.positions[:,1]))
-        self.m_AABB[2] = np.ceil(np.max(self.positions[:,0]))
-        self.m_AABB[3] = np.ceil(np.max(self.positions[:,1]))
+    def compute_AABB(self, positions):
+        self.m_AABB[0] = np.min(positions[:,0])
+        self.m_AABB[1] = np.min(positions[:,1])
+        self.m_AABB[2] = np.max(positions[:,0])
+        self.m_AABB[3] = np.max(positions[:,1])
         self.w = self.m_AABB[2] - self.m_AABB[0]
         self.h = self.m_AABB[3] - self.m_AABB[1]
 
     def normalized(self):
-        self.compute_AABB()
+        self.positions = self.getVertice()
+        self.compute_AABB(self.positions)
         center = lambda x, y: (x+y)/2.0
         center_x = center(self.m_AABB[2], self.m_AABB[0])
         center_y = center(self.m_AABB[3], self.m_AABB[1])
@@ -118,6 +118,10 @@ class Objfile:
         self.positions += np.array([1.0, 1.0])
         self.positions *= 0.5
         return self.positions
+
+    def get_normalized_AABB(self):
+        self.compute_AABB(self.positions)
+        return np.asarray(self.m_AABB)
 
 if __name__ == "__main__":
     objFile = Objfile()
