@@ -16,7 +16,7 @@ print(f"{NF} faces, {NV} vertices")
 AABB = objFile.get_normalized_AABB()
 bv = findBoundaryPoints(faces, NV)
 be = findBoudaryEdge(faces)
-
+NBE = len(be)
 
 """
 1. generate points in AABB
@@ -25,13 +25,12 @@ be = findBoudaryEdge(faces)
 4. show generated filed
 """
 NCP = 10000
-cloud_points = ti.Vector.field(2, ti.f32, NCP)
-random_point = ti.Vector.field(2, ti.f32, ())
+cloud_points = ti.Vector.field(2, ti.f64, NCP)
+random_point = ti.Vector.field(2, ti.f64, ())
 num_cp = ti.field(ti.i32, ())
-obj_pos = ti.Vector.field(2, float, NV)
-obj_f2v = ti.Vector.field(3, int, NF)  # ids of three vertices of each face
-boundary_vertices = ti.Vector.field(2, float, len(bv))
-boundary_edges = ti.Vector.field(2, int, len(be))
+obj_pos = ti.Vector.field(2, ti.f64, NV)
+obj_f2v = ti.Vector.field(3, ti.i32, NF)
+boundary_edges = ti.Vector.field(2, ti.i32, NBE)
 @ti.func
 def isIntersectionX(p0, p1, x0):
     """Shoot a ray to x-axis from x0 and test if it intersect with (p0, p1) segment."""
@@ -47,11 +46,12 @@ def isIntersectionX(p0, p1, x0):
 @ti.kernel
 def generate_random_point(AABB: ti.ext_arr()):
     x, y = ti.random(), ti.random()
-    x_min, y_min, x_max, y_max = AABB[0], AABB[1], AABB[2], AABB[3]
-    x = (x_max - x_min) * x + x_min
-    y = (y_max - y_min) * y + y_min
+    w, h = AABB[2] - AABB[0], AABB[3] - AABB[1]
+    w_p, h_p = 0.05 * w, 0.05 * h
+    x_min, y_min = AABB[0], AABB[1]
+    x = (w+w_p) * x + x_min- w_p * 0.5
+    y = (h+h_p) * y + y_min- h_p * 0.5
     random_point[None] = ti.Vector([x, y])
-    # print(random_point[None])
 
 @ti.kernel 
 def is_in_obj() -> ti.i32:
@@ -59,7 +59,7 @@ def is_in_obj() -> ti.i32:
     count = 0
     for i in boundary_edges:
         idx0, idx1 = boundary_edges[i] 
-        p0, p1 = boundary_vertices[idx0], boundary_vertices[idx1]
+        p0, p1 = obj_pos[idx0], obj_pos[idx1]
         if isIntersectionX(p0, p1, random_point[None]):
             count += 1
     if count % 2 == 0:
@@ -76,19 +76,11 @@ def fill_obj():
         generate_random_point(AABB)    
         if is_in_obj():
             add_into_field()
-        # print(f"hello:{num_cp[None]}")
 
-@ti.kernel
-def init_boundary_vertice(bv: ti.ext_arr()):
-    for i in range(bv.shape[0]):
-        boundary_vertices[i] = obj_pos[bv[i]]
 
 obj_pos.from_numpy(positions)
 obj_f2v.from_numpy(faces)
-
-init_boundary_vertice(np.asarray(bv, dtype=np.int32))
-boundary_edges.from_numpy(np.asarray(be))
-
+boundary_edges.from_numpy(np.asarray(be, dtype=np.int32))
 gui = ti.GUI("Diplay christmas mesh", res=(800, 800))
 pause = True
 while gui.running:
