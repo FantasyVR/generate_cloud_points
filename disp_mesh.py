@@ -24,7 +24,7 @@ be = findBoudaryEdge(faces)
 3. if in object, add into ti.field
 4. show generated filed
 """
-NCP = 1000
+NCP = 10000
 cloud_points = ti.Vector.field(2, ti.f32, NCP)
 random_point = ti.Vector.field(2, ti.f32, ())
 num_cp = ti.field(ti.i32, ())
@@ -40,14 +40,13 @@ def isIntersectionX(p0, p1, x0):
     t = b1 / b
     r = a * t - b0
     isInter = False
-    if r > 0 and 0 < t < 1:
+    if r >= 0 and 0 <= t <= 1:
         isInter = True
     return isInter
 
 @ti.kernel
 def generate_random_point(AABB: ti.ext_arr()):
-    x = ti.random()
-    y = ti.random()
+    x, y = ti.random(), ti.random()
     x_min, y_min, x_max, y_max = AABB[0], AABB[1], AABB[2], AABB[3]
     x = (x_max - x_min) * x + x_min
     y = (y_max - y_min) * y + y_min
@@ -77,7 +76,7 @@ def fill_obj():
         generate_random_point(AABB)    
         if is_in_obj():
             add_into_field()
-        print(f"hello:{num_cp[None]}")
+        # print(f"hello:{num_cp[None]}")
 
 @ti.kernel
 def init_boundary_vertice(bv: ti.ext_arr()):
@@ -114,5 +113,5 @@ while gui.running:
 
     fill_obj()
     gui.circles(cloud_points.to_numpy(), radius=1.0, color=0x00FF00)
-
+    gui.rect([AABB[0], AABB[1]], [AABB[2], AABB[3]], radius=1, color=0xED553B)
     gui.show()
