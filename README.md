@@ -9,7 +9,7 @@ Given a 2D triangle mesh, we could randomly generate cloud points that fill in t
 # Run
 `python disp_mesh.py`
 
-Or you could use command line arguments: `python disp_mesh.py -i data/socks.txt"
+Or you could use command line arguments: `python disp_mesh.py -i data/socks.txt`
 
 # Triangle Mesh
 We provide three tirangle meshes: **bunny**, **armadillo** and **christmas socks**.
