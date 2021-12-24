@@ -1,10 +1,10 @@
-import taichi as ti 
+import taichi as ti
 import numpy as np
 from read_obj import Objfile
 from find_boundary import findBoudaryEdge, findBoundaryPoints
-import time 
+import time
 
-ti.init(arch=ti.cpu, random_seed = int(time.time()))
+ti.init(arch=ti.cpu, random_seed=int(time.time()))
 
 objFile = Objfile()
 objFile.readTxt("data/socks.txt")
@@ -17,7 +17,6 @@ AABB = objFile.get_normalized_AABB()
 bv = findBoundaryPoints(faces, NV)
 be = findBoudaryEdge(faces)
 NBE = len(be)
-
 """
 1. generate points in AABB
 2. test if the point in the object
@@ -31,6 +30,8 @@ num_cp = ti.field(ti.i32, ())
 obj_pos = ti.Vector.field(2, ti.f64, NV)
 obj_f2v = ti.Vector.field(3, ti.i32, NF)
 boundary_edges = ti.Vector.field(2, ti.i32, NBE)
+
+
 @ti.func
 def isIntersectionX(p0, p1, x0):
     """Shoot a ray to x-axis from x0 and test if it intersect with (p0, p1) segment."""
@@ -43,22 +44,24 @@ def isIntersectionX(p0, p1, x0):
         isInter = True
     return isInter
 
+
 @ti.kernel
 def generate_random_point(AABB: ti.ext_arr()):
     x, y = ti.random(), ti.random()
     w, h = AABB[2] - AABB[0], AABB[3] - AABB[1]
     w_p, h_p = 0.05 * w, 0.05 * h
     x_min, y_min = AABB[0], AABB[1]
-    x = (w+w_p) * x + x_min- w_p * 0.5
-    y = (h+h_p) * y + y_min- h_p * 0.5
+    x = (w + w_p) * x + x_min - w_p * 0.5
+    y = (h + h_p) * y + y_min - h_p * 0.5
     random_point[None] = ti.Vector([x, y])
 
-@ti.kernel 
+
+@ti.kernel
 def is_in_obj() -> ti.i32:
     is_in = True
     count = 0
     for i in boundary_edges:
-        idx0, idx1 = boundary_edges[i] 
+        idx0, idx1 = boundary_edges[i]
         p0, p1 = obj_pos[idx0], obj_pos[idx1]
         if isIntersectionX(p0, p1, random_point[None]):
             count += 1
@@ -66,14 +69,16 @@ def is_in_obj() -> ti.i32:
         is_in = False
     return is_in
 
-@ti.kernel 
+
+@ti.kernel
 def add_into_field():
     cloud_points[num_cp[None]] = random_point[None]
     num_cp[None] += 1
 
+
 def fill_obj():
     while num_cp[None] < NCP:
-        generate_random_point(AABB)    
+        generate_random_point(AABB)
         if is_in_obj():
             add_into_field()
 
@@ -92,16 +97,16 @@ while gui.running:
     gui.circles(positions, radius=2.0, color=0xFF0000)
 
     if not pause:
-        bp = np.zeros(shape=(len(be),2))
-        ep = np.zeros(shape=(len(be),2))
+        bp = np.zeros(shape=(len(be), 2))
+        ep = np.zeros(shape=(len(be), 2))
         for i in range(len(be)):
             bp[i] = positions[be[i][0]]
             ep[i] = positions[be[i][1]]
-        gui.lines(bp,ep, radius=4,color=0x0000FF)
-        boundary=np.zeros((len(bv),2),dtype=np.float64)
+        gui.lines(bp, ep, radius=4, color=0x0000FF)
+        boundary = np.zeros((len(bv), 2), dtype=np.float64)
         for i in range(len(bv)):
             boundary[i] = positions[bv[i]]
-        gui.circles(boundary,radius=4, color=0x00FF00)
+        gui.circles(boundary, radius=4, color=0x00FF00)
 
     fill_obj()
     gui.circles(cloud_points.to_numpy(), radius=1.0, color=0x00FF00)
