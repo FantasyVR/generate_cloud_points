@@ -1,6 +1,5 @@
 import numpy as np
 from scipy.sparse import coo_matrix
-from read_obj import Objfile
 
 
 def minA(A, val):
@@ -103,6 +102,7 @@ def initCubeMesh(N):
 
 
 def initObj(file):
+    from read_obj import Objfile
     obj = Objfile()
     obj.readTxt(file)
     vertices = obj.getVertice()
