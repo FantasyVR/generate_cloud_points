@@ -2,11 +2,9 @@
 
 Given a 2D triangle mesh, we could randomly generate cloud points which fill in the triangle mesh.
 
-![](data/bunny.png )
-
-![](data/armadillo.png)
-
-![](data/socks.png)
+<img src="data/bunny.png" width="200">
+<img src="data/armadillo.png" width="200">
+<img src="data/socks.png" width="200">
 
 # Run
 `python disp_mesh.py`
