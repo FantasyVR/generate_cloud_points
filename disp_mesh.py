@@ -7,7 +7,7 @@ import time
 ti.init(arch=ti.cpu, random_seed = int(time.time()))
 
 objFile = Objfile()
-objFile.readTxt("bunny.txt")
+objFile.readTxt("data/socks.txt")
 NV = objFile.getNumVertice()
 NF = objFile.getNumFaces()  # number of faces
 positions = objFile.normalized()
