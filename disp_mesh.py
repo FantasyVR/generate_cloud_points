@@ -3,11 +3,18 @@ import numpy as np
 from read_obj import Objfile
 from find_boundary import findBoudaryEdge, findBoundaryPoints
 import time
+import argparse
 
 ti.init(arch=ti.cpu, random_seed=int(time.time()))
 
+
+parser = argparse.ArgumentParser(description='Generate Cloud Points in A object')
+parser.add_argument('--input', '-i',nargs=1, default="data/bunny.txt", type=str, required=False)
+args = parser.parse_args()
+input_file = args.input if type(args.input) is str else args.input[0]
+
 objFile = Objfile()
-objFile.readTxt("data/socks.txt")
+objFile.readTxt(input_file)
 NV = objFile.getNumVertice()
 NF = objFile.getNumFaces()  # number of faces
 positions = objFile.normalized()
