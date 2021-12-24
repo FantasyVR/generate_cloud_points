@@ -9,9 +9,11 @@ ti.init(arch=ti.cpu, random_seed=int(time.time()))
 
 
 parser = argparse.ArgumentParser(description='Generate Cloud Points in A object')
-parser.add_argument('--input', '-i',nargs=1, default="data/bunny.txt", type=str, required=False)
+parser.add_argument('--input', '-i',nargs=1, default="data/socks.txt", type=str, required=False)
 args = parser.parse_args()
 input_file = args.input if type(args.input) is str else args.input[0]
+
+BATCH_RANDOM_SIZE = 128
 
 objFile = Objfile()
 objFile.readTxt(input_file)
@@ -20,7 +22,6 @@ NF = objFile.getNumFaces()  # number of faces
 positions = objFile.normalized()
 faces = objFile.getFaces()
 print(f"{NF} faces, {NV} vertices")
-AABB = objFile.get_normalized_AABB()
 bv = findBoundaryPoints(faces, NV)
 be = findBoudaryEdge(faces)
 NBE = len(be)
@@ -30,11 +31,12 @@ NBE = len(be)
 3. if in object, add into ti.field
 4. show generated filed
 """
-NCP = 10000
-cloud_points = ti.Vector.field(2, ti.f64, NCP)
-random_point = ti.Vector.field(2, ti.f64, ())
+NCP = 1000
+cloud_points = ti.Vector.field(2, ti.f32, NCP + BATCH_RANDOM_SIZE)
+random_point = ti.Vector.field(2, ti.f32, ())
+AABB = ti.field(ti.f32, 4)
 num_cp = ti.field(ti.i32, ())
-obj_pos = ti.Vector.field(2, ti.f64, NV)
+obj_pos = ti.Vector.field(2, ti.f32, NV)
 obj_f2v = ti.Vector.field(3, ti.i32, NF)
 boundary_edges = ti.Vector.field(2, ti.i32, NBE)
 
@@ -52,30 +54,31 @@ def isIntersectionX(p0, p1, x0):
     return isInter
 
 
-@ti.kernel
-def generate_random_point(AABB: ti.ext_arr()):
-    x, y = ti.random(), ti.random()
-    w, h = AABB[2] - AABB[0], AABB[3] - AABB[1]
-    w_p, h_p = 0.05 * w, 0.05 * h
-    x_min, y_min = AABB[0], AABB[1]
-    x = (w + w_p) * x + x_min - w_p * 0.5
-    y = (h + h_p) * y + y_min - h_p * 0.5
-    random_point[None] = ti.Vector([x, y])
-
-
-@ti.kernel
-def is_in_obj() -> ti.i32:
+@ti.func
+def is_in_obj(x, y) -> ti.i32:
     is_in = True
     count = 0
-    for i in boundary_edges:
+    for i in range(NBE):
         idx0, idx1 = boundary_edges[i]
         p0, p1 = obj_pos[idx0], obj_pos[idx1]
-        if isIntersectionX(p0, p1, random_point[None]):
+        if isIntersectionX(p0, p1, ti.Vector([x, y])):
             count += 1
     if count % 2 == 0:
         is_in = False
     return is_in
 
+@ti.kernel
+def batch_generate_points_in_mesh():
+    for i in range(BATCH_RANDOM_SIZE):
+      x, y = ti.random(), ti.random()
+      w, h = AABB[2] - AABB[0], AABB[3] - AABB[1]
+      w_p, h_p = 0.05 * w, 0.05 * h
+      x_min, y_min = AABB[0], AABB[1]
+      x = (w + w_p) * x + x_min - w_p * 0.5
+      y = (h + h_p) * y + y_min - h_p * 0.5
+      if is_in_obj(x, y):
+        idx = ti.atomic_add(num_cp[None], 1)
+        cloud_points[idx] = ti.Vector([x, y])
 
 @ti.kernel
 def add_into_field():
@@ -85,9 +88,7 @@ def add_into_field():
 
 def fill_obj():
     while num_cp[None] < NCP:
-        generate_random_point(AABB)
-        if is_in_obj():
-            add_into_field()
+        batch_generate_points_in_mesh()
 
 
 obj_pos.from_numpy(positions)
@@ -95,6 +96,8 @@ obj_f2v.from_numpy(faces)
 boundary_edges.from_numpy(np.asarray(be, dtype=np.int32))
 gui = ti.GUI("Diplay christmas mesh", res=(800, 800))
 pause = True
+AABB_np = objFile.get_normalized_AABB()
+AABB.from_numpy(AABB_np)
 while gui.running:
     for e in gui.get_events():
         if e.key == gui.SPACE and gui.is_pressed:
@@ -116,6 +119,6 @@ while gui.running:
         gui.circles(boundary, radius=4, color=0x00FF00)
 
     fill_obj()
-    gui.circles(cloud_points.to_numpy(), radius=1.0, color=0x00FF00)
-    gui.rect([AABB[0], AABB[1]], [AABB[2], AABB[3]], radius=1, color=0xED553B)
+    gui.circles(cloud_points.to_numpy(), radius=2.0, color=0x00FF00)
+    gui.rect([AABB_np[0], AABB_np[1]], [AABB_np[2], AABB_np[3]], radius=1, color=0xED553B)
     gui.show()
