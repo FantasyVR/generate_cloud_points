@@ -6,16 +6,21 @@ Normals, texture coordinates are not extracted right now.
 
 import numpy as np
 import sys
+from find_boundary import findBoudaryEdge, findBoundaryPoints
 
 
 class Objfile:
-    m_numVertices = 0
-    m_numFaces = 0
-    m_vertices = []
-    m_indices = []
-    m_filename = ""
-    m_AABB = [0.0, 0.0, 0.0, 0.0]  # x_min, y_min, x_max, y_max
-    w, h = 0.0, 0.0
+    def __init__(self):
+        self.m_numVertices = 0
+        self.m_numFaces = 0
+        self.m_vertices = []
+        self.m_indices = []
+        self.m_filename = ""
+        self.m_AABB = [0.0, 0.0, 0.0, 0.0]  # x_min, y_min, x_max, y_max
+        self.w, h = 0.0, 0.0
+        self.be = []
+        self.bv = []
+        self.positions = []
 
     def read(self, filename=""):
         """
@@ -128,6 +133,21 @@ class Objfile:
     def get_normalized_AABB(self):
         self.compute_AABB(self.positions)
         return np.asarray(self.m_AABB)
+
+    def get_boundary_vertices(self):
+        NV = self.getNumVertice()
+        self.bv = findBoundaryPoints(self.getFaces(), NV)
+        return self.bv
+
+    def get_boundary_edges(self):
+        self.be = findBoudaryEdge(self.getFaces())
+        return self.be
+
+    def get_num_boundary_vertices(self):
+        return len(self.bv)
+
+    def get_num_boundary_edges(self):
+        return len(self.be)
 
 
 if __name__ == "__main__":
